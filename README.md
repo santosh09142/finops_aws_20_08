@@ -26,7 +26,7 @@ This project provides tools and scripts for managing financial operations (FinOp
     cd aws-finops
 
 3. Install dependencies:
-    pip install -r requirements.txt
+    pipenv sync
 
 ## Usage
 
