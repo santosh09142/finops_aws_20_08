@@ -12,6 +12,7 @@ SERVICE_MAP = {
     # Use module-qualified class references so they can be imported dynamically
     "s3": "core.s3_service:S3Service",
     "ec2": "core.ec2_service:EC2Service",
+    "lambda": "core.lambda_service:LambdaService",
 }
 
 AWS_PROFILE = "master9account"

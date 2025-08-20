@@ -1,17 +1,18 @@
 # /core/aws_connector.py
-"""This module provides a class to handle AWS connections and role assumptions."""
+"""Module to handle AWS connections and role assumptions."""
 
 from typing import Optional
 import boto3
 from utils.logger import logger
 
+
 class AWSConnector:
     """A class to handle AWS connections and role assumptions."""
-    
-    def __init__(self, region_name:Optional[str] = None) -> None:
+
+    def __init__(self, region_name: Optional[str] = None) -> None:
         """Initialize the AWS Connector with a specific region."""
         self.region_name = region_name
-        
+
     def get_session(self, profile_name: Optional[str] = None):
         """Create a boto3 session with the specified profile and region."""
         return boto3.Session(
@@ -26,7 +27,8 @@ class AWSConnector:
         sts_client = session.client('sts')
         try:
             role_arn = f"arn:aws:iam::{account_id}:role/{role_name}"
-            logger.info("Assuming role %s in account %s", role_name, account_id)
+            logger.info("Assuming role %s in account %s", role_name,
+                        account_id)
             response = sts_client.assume_role(
                 RoleArn=role_arn,
                 RoleSessionName="FinOpsSession"
@@ -40,5 +42,6 @@ class AWSConnector:
                 region_name=self.region_name
             )
         except Exception as e:
-            logger.error("Failed to assume role %s in account %s: %s", role_name, account_id, e)
-            return None                   
+            logger.error("Failed to assume role %s in account %s: %s",
+                         role_name, account_id, e)
+            return None
