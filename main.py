@@ -27,6 +27,8 @@ if __name__ == "__main__":
     result = runner.run()
     print(f"Result for region: {region}")
     for acc_id, svc_data in result.items():
-        print("  Account ID: %s", acc_id)
+        print(f"  Account ID: {acc_id}")
         for svc, items in svc_data.items():
-            print("    Service: %s: %s", svc, len(items))   
+            print(f"    Service: {svc}: {len(items)}")
+            
+# end of file

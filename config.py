@@ -19,4 +19,7 @@ ASSUME_ROLE_NAME = "FinOpsReadWriteRole"
 ENABLE_SERVICESNOW = False
 LOG_LEVEL = "INFO"
 
+#Free metric capture
+METRIC_NAME = 'CPUUtilization'
+DAYS_LIST = [30, 60]
 # End-of-file (EOF)
