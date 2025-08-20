@@ -7,4 +7,4 @@
 # ignore all .pyd files
 **/*.pyd
 # Ignore log files
-**/
+/logs
