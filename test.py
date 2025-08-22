@@ -1,7 +1,5 @@
-from config import SERVICE_MAP
+from urllib.parse import quote_plus
 
-service = "s3"
-
-svc_cls = SERVICE_MAP.get(service)
-
-print(svc_cls)
+password = 'P@ssw0rd@123'
+encoded_password = quote_plus(password)
+print(encoded_password)

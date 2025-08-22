@@ -4,8 +4,13 @@
 from utils.logger import logger
 from core.service_base import ServiceBase
 from datetime import datetime, timedelta, timezone
+from db.init_db import Session
+from db.models import EC2Instance
+import inflection
 import re
 import config
+
+db_session = Session()
 
 class EC2Service(ServiceBase):
     """Service to interact with AWS EC2 instances."""
@@ -105,53 +110,53 @@ class EC2Service(ServiceBase):
                         
                         
                         instance_info = {
-                            'InstanceId': instance_id,
-                            'CreationTime': instance['NetworkInterfaces'][0]['Attachment']['AttachTime'] if instance['NetworkInterfaces'] and instance['NetworkInterfaces'][0]['Attachment']['AttachTime'] < instance['LaunchTime'] else '',
-                            'InstanceType': instance['InstanceType'],
-                            'State': instance['State']['Name'],
-                            'StateCode': instance['State']['Code'],
-                            'LastTransitionDate': last_transition_date,
-                            'Aging': (datetime.now(timezone.utc) - older_date).days,
-                            'LastTransitionReason': last_transition_reason,
-                            'Launch_update_Time': instance['LaunchTime'],
-                            'AvailabilityZone': instance['Placement']['AvailabilityZone'],
-                            'MacAddress': instance['NetworkInterfaces'][0]['MacAddress'] if instance['NetworkInterfaces'] else 'N/A',
-                            'NetworkInterfaceId': instance['NetworkInterfaces'][0]['NetworkInterfaceId'] if instance['NetworkInterfaces'] else 'N/A',
-                            'AccountID': instance['NetworkInterfaces'][0]['OwnerId'] if instance['NetworkInterfaces'] else instance.get('OwnerId', 'N/A'),
-                            'PrivateIpAddress': instance.get('PrivateIpAddress', 'N/A'),
-                            'PublicIpAddress': instance.get('PublicIpAddress', 'N/A'),
-                            'NetworkInterfaceAttachmentId': instance['NetworkInterfaces'][0]['Attachment']['AttachmentId'] if instance['NetworkInterfaces'] else 'N/A',
+                            'instance_id': instance_id,
+                            'creation_time': instance['NetworkInterfaces'][0]['Attachment']['AttachTime'] if instance['NetworkInterfaces'] and instance['NetworkInterfaces'][0]['Attachment']['AttachTime'] < instance['LaunchTime'] else 'N/A',
+                            'instance_type': instance['InstanceType'],
+                            'state': instance['State']['Name'],
+                            'state_code': instance['State']['Code'],
+                            'last_transition_date': last_transition_date,
+                            'aging': (datetime.now(timezone.utc) - older_date).days,
+                            'last_transition_reason': last_transition_reason,
+                            'launch_update_time': instance['LaunchTime'],
+                            'availability_zone': instance['Placement']['AvailabilityZone'],
+                            'mac_address': instance['NetworkInterfaces'][0]['MacAddress'] if instance['NetworkInterfaces'] else 'N/A',
+                            'network_interface_id': instance['NetworkInterfaces'][0]['NetworkInterfaceId'] if instance['NetworkInterfaces'] else 'N/A',
+                            'account_id': instance['NetworkInterfaces'][0]['OwnerId'] if instance['NetworkInterfaces'] else instance.get('OwnerId', 'N/A'),
+                            'private_ip_address': instance.get('PrivateIpAddress', 'N/A'),
+                            'public_ip_address': instance.get('PublicIpAddress', 'N/A'),
+                            'network_interface_attachment_id': instance['NetworkInterfaces'][0]['Attachment']['AttachmentId'] if instance['NetworkInterfaces'] else 'N/A',
                             # 'UsageOperationUpdateTime': instance.get('UsageOperationUpdateTime', 'N/A'),
-                            'UsageOperation': instance.get('UsageOperation', 'N/A'),
-                            'Platform': instance.get('PlatformDetails', 'N/A'),
-                            'Architecture': instance['Architecture'],
-                            'SubnetId': instance.get('SubnetId', 'N/A'),
-                            'VpcId': instance.get('VpcId','N/A'),
-                            'ImageId': instance.get('ImageId','N/A'),
-                            'SecurityGroups': [group['GroupName'] for group in instance['SecurityGroups']],
+                            'usage_operation': instance.get('UsageOperation', 'N/A'),
+                            'platform': instance.get('PlatformDetails', 'N/A'),
+                            'architecture': instance['Architecture'],
+                            'subnet_id': instance.get('SubnetId', 'N/A'),
+                            'vpc_id': instance.get('VpcId','N/A'),
+                            'image_id': instance.get('ImageId','N/A'),
+                            'security_groups': [group['GroupName'] for group in instance['SecurityGroups']],
                             # 'Tags': [{tag['Key']: tag['Value']} for tag in instance.get('Tags', [])],
-                            'Tags' : {tag['Key']: tag['Value'] for tag in instance.get('Tags', [])},
-                            'InstanceName': next((tag['Value'] for tag in instance.get('Tags', []) if tag['Key'] == 'Name'), 'N/A'),
+                            'tag_properties' :  {tag['Key']: tag['Value'] for tag in instance.get('Tags', [])},
+                            'instance_name': next((tag['Value'] for tag in instance.get('Tags', []) if tag['Key'] == 'Name'), 'N/A'),
                             'region': self.region,
                             # 'DeviceName': instance['BlockDeviceMappings'][0]['DeviceName'] if instance['BlockDeviceMappings'] else 'N/A',
-                            'RootDeviceType': instance['RootDeviceType'],
+                            'root_device_type': instance['RootDeviceType'],
                             # 'VolumeId': instance['BlockDeviceMappings'][0]['Ebs']['VolumeId'] if instance['BlockDeviceMappings'] else 'N/A',
-                            'VolumeId': vol_Id,
-                            'VolumeType': vol_type,
-                            'VolumeSize': total_volume_size_sum,
-                            'Volume_IOPs': vol_status,
-                            'Volume_InstanceName': vol_instance,
-                            'VolumeDevice': vol_device,
-                            'VolumeStatus': instance['BlockDeviceMappings'][0]['Ebs'].get('Status', 'N/A') if instance['BlockDeviceMappings'] else 'N/A',
-                            'VolumeEncrypted': instance['BlockDeviceMappings'][0]['Ebs'].get('Encrypted', 'N/A') if instance['BlockDeviceMappings'] else 'N/A',
-                            'VolumeAttachTime': instance['BlockDeviceMappings'][0]['Ebs']['AttachTime'] if instance['BlockDeviceMappings'] else 'N/A',
-                            'VolumeDeleteOnTermination': instance['BlockDeviceMappings'][0]['Ebs']['DeleteOnTermination'] if instance['BlockDeviceMappings'] else 'N/A',
+                            'volume_id': vol_Id,
+                            'volume_type': vol_type,
+                            'volume_size': total_volume_size_sum,
+                            'volume_iops': vol_status,
+                            'volume_instance_name': vol_instance,
+                            'volume_device': vol_device,
+                            'volume_status': instance['BlockDeviceMappings'][0]['Ebs'].get('Status', 'N/A') if instance['BlockDeviceMappings'] else 'N/A',
+                            'volume_encrypted': instance['BlockDeviceMappings'][0]['Ebs'].get('Encrypted', 'False') if instance['BlockDeviceMappings'] else 'False',
+                            'volume_attach_time': instance['BlockDeviceMappings'][0]['Ebs']['AttachTime'] if instance['BlockDeviceMappings'] else 'N/A',
+                            'volume_delete_on_termination': instance['BlockDeviceMappings'][0]['Ebs']['DeleteOnTermination'] if instance['BlockDeviceMappings'] else 'N/A',
                             # 'VolumeTags': {tag['Key']: tag['Value'] for tag in instance.get('Tags', [])},
-                            'NetworkAttachTime': instance['NetworkInterfaces'][0]['Attachment']['AttachTime'] if instance['NetworkInterfaces'] else 'N/A',
-                            'EbsOptimized': instance.get('EbsOptimized', 'N/A'),
-                            'Monitoring': instance['Monitoring']['State'],
-                            'PrivateDnsName': instance.get('PrivateDnsName', 'N/A'),
-                            'PublicDnsName': instance.get('PublicDnsName', 'N/A'),
+                            'network_attach_time': instance['NetworkInterfaces'][0]['Attachment']['AttachTime'] if instance['NetworkInterfaces'] else 'N/A',
+                            'ebs_optimized': instance.get('EbsOptimized', 'N/A'),
+                            'monitoring_state': instance['Monitoring']['State'],
+                            'private_dns_name': instance.get('PrivateDnsName', 'N/A'),
+                            'public_dns_name': instance.get('PublicDnsName', 'N/A'),
                             # '15_days_avg': aggregated_metrics[15]['Average'],
                             # '15_days_max': aggregated_metrics[15]['Maximum'],
                             # '15_days_min': aggregated_metrics[15]['Minimum'],
@@ -164,15 +169,18 @@ class EC2Service(ServiceBase):
                             # '15_days_avg': round(float(aggregated_metrics[15]['Average']), 2) if aggregated_metrics[15]['Average'] != 'N/A' else 'N/A',
                             # '15_days_max': round(float(aggregated_metrics[15]['Maximum']), 2) if aggregated_metrics[15]['Maximum'] != 'N/A' else 'N/A',
                             # '15_days_min': round(float(aggregated_metrics[15]['Minimum']), 2) if aggregated_metrics[15]['Minimum'] != 'N/A' else 'N/A',
-                            '30_days_avg': round(float(aggregated_metrics[30]['Average']), 2) if aggregated_metrics[30]['Average'] != 'N/A' else 'N/A',
-                            '30_days_max': round(float(aggregated_metrics[30]['Maximum']), 2) if aggregated_metrics[30]['Maximum'] != 'N/A' else 'N/A',
-                            '30_days_min': round(float(aggregated_metrics[30]['Minimum']), 2) if aggregated_metrics[30]['Minimum'] != 'N/A' else 'N/A',
-                            '60_days_avg': round(float(aggregated_metrics[60]['Average']), 2) if aggregated_metrics[60]['Average'] != 'N/A' else 'N/A',
-                            '60_days_max': round(float(aggregated_metrics[60]['Maximum']), 2) if aggregated_metrics[60]['Maximum'] != 'N/A' else 'N/A',
-                            '60_days_min': round(float(aggregated_metrics[60]['Minimum']), 2) if aggregated_metrics[60]['Minimum'] != 'N/A' else 'N/A',
+                            'thirty_days_avg': round(float(aggregated_metrics[30]['Average']), 2) if aggregated_metrics[30]['Average'] != 'N/A' else 'N/A',
+                            'thirty_days_max': round(float(aggregated_metrics[30]['Maximum']), 2) if aggregated_metrics[30]['Maximum'] != 'N/A' else 'N/A',
+                            'thirty_days_min': round(float(aggregated_metrics[30]['Minimum']), 2) if aggregated_metrics[30]['Minimum'] != 'N/A' else 'N/A',
+                            'sixty_days_avg': round(float(aggregated_metrics[60]['Average']), 2) if aggregated_metrics[60]['Average'] != 'N/A' else 'N/A',
+                            'sixty_days_max': round(float(aggregated_metrics[60]['Maximum']), 2) if aggregated_metrics[60]['Maximum'] != 'N/A' else 'N/A',
+                            'sixty_days_min': round(float(aggregated_metrics[60]['Minimum']), 2) if aggregated_metrics[60]['Minimum'] != 'N/A' else 'N/A',
                         }
+                        sync_ec2instance_to_db(instance_props=instance_info)
                         instances_data.append(instance_info)
+                        
             logger.info("Fetched EC2 properties for account %s in region %s", self.account_id, self.client.meta.region_name)
+    
             return instances_data   #response('Reservations',[])""
         except Exception as e:
             logger.error("Error fetching EC2 properties: {str(%s)}", e)
@@ -320,6 +328,88 @@ def get_volume_attachment_status(ec2_client, volume_id):
                 "IsStorage": "Error"
             }
 
+def sync_ec2instance_to_db_test(instance_props):
+    """Syncs EC2 instance data to the database."""
+    instance_obj = db_session.query(EC2Instance).filter_by(instance_id=instance_props['instanceid']).first()
+    print(instance_props["tags"])
+    print(type(instance_props["tags"]))
+    if not instance_obj:
+        instance_obj = EC2Instance(
+            instance_id=instance_props['instanceid'],
+            creation_time=instance_props['creationtime'],
+            instance_type=instance_props['instancetype'],
+            state=instance_props['state'],
+            state_code=instance_props['statecode'],
+            last_transition_date=instance_props['lasttransitiondate'],
+            aging=instance_props['aging'],
+            last_transition_reason=instance_props['lasttransitionreason'],
+            launch_update_time=instance_props['launchupdatetime'],
+            availability_zone=instance_props['availabilityzone'],
+            mac_address=instance_props['macaddress'],
+            network_interface_id=instance_props['networkinterfaceid'],
+            account_id=instance_props['accountid'],
+            private_ip_address=instance_props['privateipaddress'],
+            public_ip_address=instance_props['publicipaddress'],
+            network_interface_attachment_id=instance_props['networkinterfaceattachmentid'],
+            usage_operation=instance_props['usageoperation'],
+            platform=instance_props['platform'],
+            architecture=instance_props['architecture'],
+            subnet_id=instance_props['subnetid'],
+            vpc_id=instance_props['vpcid'],
+            image_id=instance_props['imageid'],
+            security_groups=str(instance_props['securitygroups']),
+            tag_properties=str(instance_props.get('tags', {})),
+            instance_name=instance_props.get('instancename', 'N/A'),
+            region=instance_props.get('region', 'N/A'),
+            root_device_type=instance_props.get('rootdevicetype', 'N/A'),
+            volume_id=instance_props.get('volumeid', 'N/A'),
+            volume_type=instance_props.get('volumetype', 'N/A'),
+            volume_size=instance_props.get('volumesize', 0),
+            volume_iops=instance_props.get('volumeiops', 0),
+            volume_instance_name=instance_props.get('volumeinstancename', 'N/A'),
+            volume_device=instance_props.get('volumedevice', 'N/A'),
+            volume_status=instance_props.get('volumestatus', 'N/A'),
+            volume_encrypted=instance_props.get('volumeencrypted', False),
+            volume_attach_time=instance_props.get('volumeattachtime', None),
+            volume_delete_on_termination=instance_props.get('volumedeleteontermination', False),
+            network_attach_time=instance_props.get('networkattachtime', None),
+            ebs_optimized=instance_props.get('ebsoptimized', False),
+            monitoring_state=instance_props.get('monitoring', 'N/A'),
+        )
+        db_session.add(instance_obj)
+        db_session.commit()
+    else:
+        model_columns = set(c.name for c in instance_obj.__table__.columns)
+        for key, value in instance_props.items():
+            normalized_key = inflection.underscore(key)
+            if normalized_key in model_columns:
+                setattr(instance_obj, normalized_key, value)
+        db_session.commit()
+                
+    return instance_obj
 
-# end of file    
-    
+def sync_ec2instance_to_db(instance_props):
+    """Syncs EC2 instance data to the database."""
+    instance_obj = db_session.query(EC2Instance).filter_by(instance_id=instance_props['instance_id']).first()
+    model_columns = set(c.name for c in EC2Instance.__table__.columns)
+    updated = False
+
+    if not instance_obj:
+        # Create new record
+        instance_obj = EC2Instance(**{k: v for k, v in instance_props.items() if k in model_columns})
+        db_session.add(instance_obj)
+        db_session.commit()
+    else:
+        # Update only changed fields
+        for key, value in instance_props.items():
+            if key in model_columns:
+                current_value = getattr(instance_obj, key)
+                if current_value != value:
+                    setattr(instance_obj, key, value)
+                    updated = True
+        if updated:
+            db_session.commit()
+    return instance_obj
+
+
+# end of file

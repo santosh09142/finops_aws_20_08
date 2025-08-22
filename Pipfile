@@ -5,6 +5,9 @@ name = "pypi"
 
 [packages]
 boto3 = "*"
+sqlalchemy = "*"
+alembic = "*"
+psycopg2-binary = "*"
 
 [dev-packages]
 
